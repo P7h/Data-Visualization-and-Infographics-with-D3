@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Module 3 Exercise -- Sacramento Yearly Average Temperature.</title>
+		<script type="text/javascript" src="http://d3js.org/d3.v3.js">
+	</script>
+	</head>
+
+	<body>
+		<h2>Sacramento Yearly Average Temperature</h2>
+		<script type="text/javascript">
+				console.clear();
+			//<![CDATA[
+				var w = 1200;
+				var h = 1585;
+				var normalFillColor = "#BCF5A9";
+				var clickFillColor = "#FF6600";
+				var hoverFillColor = "#006680";
+				function randomIntForPickingData(min, max) {
+					return Math.floor(Math.random() * (max - min + 1) + min);
+				}
+				var changeColorOnClick = (function(){
+					var currentColor = normalFillColor;
+
+					return function(){
+						currentColor = currentColor == normalFillColor ? clickFillColor : normalFillColor;
+						d3.select(this).style("fill", currentColor);
+					}
+				})();
+
+				var svg = d3.select("body")
+					.append("svg")
+					.attr("width", w)
+					.attr("height", h);
+
+				//Load in contents of CSV file
+				d3.csv("Sacramento_yearly_tavg.csv", function(csvData) {
+					console.time("barchart");
+					var barPadding = 1;
+
+					svg.selectAll("barchart")
+					   .data(csvData)
+					   .enter()
+					   .append("rect")
+					   .attr("x", function(d, i) {
+							return 150;
+						})
+					   .attr("y", function(d, i) {
+							return Math.ceil(i * (h / csvData.length));
+						})
+					   .attr("width", function(d, i) { 
+							return Math.ceil(d["tavg"] * 50);
+						})
+					   .attr("height", function(d, i) {
+							return Math.floor(h / csvData.length - barPadding - 2.5);
+						})
+					   .attr("fill", function(d) {
+							return normalFillColor;
+						})
+					   .on("mouseover", function(d, i) {
+						  d3.select(this).attr("r", 10).style("fill", hoverFillColor);
+						})                  
+						.on("mouseout", function(d, i) {
+						  d3.select(this).attr("r", 5.5).style("fill", normalFillColor);
+						})
+					   .on("click", changeColorOnClick);;
+					console.timeEnd("barchart");
+
+					console.time("data-values");
+					svg.selectAll("data-values")
+					   .data(csvData)
+					   .enter()
+					   .append("text")
+					   .text(function(d, i) {
+							return parseFloat(d["tavg"]).toFixed(2);;
+					   })
+					   .attr("text-anchor", "middle")
+					   .attr("x", function(d, i) {
+							return Math.floor((d["tavg"] * 50) - 5 + 140);
+					   })
+					   .attr("y", function(d, i) {
+							return Math.floor(i * (h / csvData.length) + (h / csvData.length - barPadding) / 1.45);
+					   })
+					   .attr("fill", "black")
+					   .attr("font-size", "10px")
+					   .attr("font-family", "roboto");
+					console.timeEnd("data-values");
+
+					console.time("axis-labels");
+					svg.selectAll("axis-labels")
+						.data(csvData)
+						.enter()
+						.append("text")
+						.attr("x", 145)
+						.attr("y", function(d, i) {
+							return Math.floor(i * (h / csvData.length) + (h / csvData.length - barPadding) / 1.35);
+						})
+						.attr("fill", "black")
+						.attr("font-size", "10px")
+						.attr("font-family", "roboto")
+						.attr("font-weight", "bold")
+						.attr("text-anchor", "end")
+						.text(function(d) {
+							return d.year
+						});
+					console.timeEnd("axis-labels");
+				});
+			//]]>
+		</script>
+	</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Loading CSV Data with D3</title>
+		<script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
+	</head>
+	<body>
+
+		<p>Check the console!</p>
+		<svg width="500" height="500">
+			<line x1="0" y1="35" x2="158" y2="300" stroke="blue" stroke-width="2" />
+			<polygon points="341,204.67 281,308.59 161,308.59 101,204.67 161,100.74 281,100.74 341,204.67" fill="yellow" stroke-width="2" stroke="green" />
+			<rect x="340" y="200" width="200" height="200" fill="red" stroke-width="2" stroke="yellow"/>
+			<circle cx="400" cy="100" r="100" fill="green" stroke-width="2" stroke="red" />
+		</svg>
+
+		<script type="text/javascript">		
+			console.clear();
+
+			//Load in contents of CSV file
+			console.time("Load and dump CSV file");
+			d3.csv("LifeExpectancyAtBirth.csv", function(data) {
+
+				//Now CSV contents have been transformed into
+				//an array of JSON objects.
+
+				//Log 'data' to the console, for verification.
+				console.table(data, ["CountryName", "1960", "2012"]);
+				console.log(data);
+			});
+			console.timeEnd("Load and dump CSV file");
+
+		</script>
+
+	</body>
+</html>
