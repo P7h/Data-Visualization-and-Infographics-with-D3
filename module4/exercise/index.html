@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Module 4 Exercise -- Life Expectancy for all the countries.</title>
+		<script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
+		<style type="text/css">
+			
+			body {
+				background-color: white;
+				font-family: Roboto, Helvetica, Arial, sans-serif;
+			}
+
+			h1 {
+				font-size: 24px;
+				margin: 0;
+			}
+
+			p {
+				font-size: 14px;
+				margin: 5px 0 0 0;
+			}
+
+			svg {
+				background-color: white;
+			}
+
+			rect:hover {
+				fill: green;
+			}
+			
+			.axis path,
+			.axis line {
+				fill: none;
+				stroke: black;
+				shape-rendering: crispEdges;
+			}
+			
+			.axis text {
+				font-family: Roboto;
+				font-size: 11px;
+			}
+
+			.y.axis path,
+			.y.axis line {
+				opacity: 0;
+			}
+
+		</style>
+	</head>
+	<body>
+
+		<h1>Life expectancy at birth in years</h1>
+		<p>Life expectancy at birth indicates the number of years a newborn infant would live if prevailing patterns of mortality at the time of its birth were to stay the same throughout its life.</p>
+		<p>Source: <a href="http://stats.oecd.org/Index.aspx?DataSetCode=BLI">World Bank</a>, 2014</p>
+
+		<script type="text/javascript">		
+
+			var w = 700;
+			var h = 600;
+			var padding = [ 20, 10, 30, 160 ];  //Top, right, bottom, left
+
+			var widthScale = d3.scale.linear()
+								.range([ 0, w - padding[1] - padding[3] ]);
+			
+			var heightScale = d3.scale.ordinal()
+								.rangeRoundBands([ padding[0], h - padding[2] ], 0.2);
+
+			var xAxis = d3.svg.axis()
+							.scale(widthScale)
+							.orient("bottom");
+
+			var yAxis = d3.svg.axis()
+							.scale(heightScale)
+							.orient("left");
+
+			var svg = d3.select("body")
+						.append("svg")
+						.attr("width", w)
+						.attr("height", h);
+
+			function randomIntForPickingData(min, max) {
+				return Math.floor(Math.random() * (max - min + 1) + min);
+			}
+
+			var normalFillColor = "#BCF5A9";
+			var clickFillColor = "#FF6600";
+			var changeColorOnClick = (function(){
+				var currentColor = normalFillColor;
+
+				return function(){
+					console.log(currentColor);
+					currentColor = currentColor == normalFillColor ? clickFillColor : normalFillColor;
+					console.log(currentColor);
+					d3.select(this).style("fill", currentColor);
+				}
+			})();
+
+			d3.csv("LifeExpectancyAtBirth.csv", function(data) {
+				/*data.forEach(function(d) {
+					console.log(d.CountryName);
+				});*/
+
+				console.time("data-transformation");
+				data.sort(function(a, b) {
+					return d3.descending(+a["2012"], +b["2012"]);
+				});
+
+				var dataSubset = [];
+				var j = 0;
+				//As our data is huge [~200 rows], we will only use a subset of the data and for even distribution, we will select one row every n-random-rows to get 30 to 40 rows for the chart; beyond these number of rows, display gets rather too absurd.
+				var randomInt = randomIntForPickingData(5, 8);
+				for(i = 0; i < data.length; i += randomInt) {
+					dataSubset[j] = data[i];
+					j++;
+				}
+				data = dataSubset;
+
+				widthScale.domain([ 0, d3.max(data, function(d) {
+					return +d["2012"];
+				}) ]);
+
+				heightScale.domain(data.map(function(d) { 
+					return d.CountryName; 
+				} ));
+				console.timeEnd("data-transformation");
+
+				console.time("barchart");
+				var rects = svg.selectAll("barchart")
+								.data(data)
+								.enter()
+								.append("rect");
+
+				rects.attr("x", padding[3])
+					.attr("y", function(d) {
+						return heightScale(d.CountryName);
+					})
+					.attr("width", function(d) {
+						return widthScale(d["2012"]);
+					})
+					.attr("height", heightScale.rangeBand())
+					.attr("fill", normalFillColor)
+					//.on("click", changeColorOnClick)
+					.append("title")
+					.text(function(d) {
+						return d.CountryName + "'s life expectancy at birth is " + d["2012"] + " years.";
+					});
+				console.timeEnd("barchart");
+
+				//To display data values on the bar itself; but at the extreme right end of the bar.
+				console.time("data-values");
+				svg.selectAll("data-values")
+				   .data(data)
+				   .enter()
+				   .append("text")
+				   .text(function(d, i) {
+						return d["2012"];
+				   })
+				   .attr("text-anchor", "middle")
+				   .attr("x", function(d, i) {
+						return widthScale(d["2012"]) + 4.85 * padding[2];
+				   })
+				   .attr("y", function(d, i) {
+						return heightScale(d.CountryName) + 10;
+				   })
+				   .attr("fill", "black")
+				   .attr("font-size", "10px")
+				   .attr("font-family", "roboto");
+				console.timeEnd("data-values");
+
+				console.time("axes");
+				svg.append("g")
+					.attr("class", "x axis")
+					.attr("transform", "translate(" + padding[3] + "," + (h - padding[2]) + ")")
+					.call(xAxis);
+
+				svg.append("g")
+					.attr("class", "y axis")
+					.attr("transform", "translate(" + padding[3] + ",0)")
+					.call(yAxis);
+				console.timeEnd("axes");
+			});
+
+		</script>
+	</body>
+</html>

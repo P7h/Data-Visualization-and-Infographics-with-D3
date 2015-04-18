@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Life Expectancy Slope Graph: 1960 &ndash; 2011</title>
+        <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <style>
+    body { color: #444; background: #f3f3f3; font: normal 12px "Adobe Garamond Pro", "Palatino", serif; margin: 2em; }
+    header { margin: 0 0 20px 220px; border-bottom: 0px solid #6c6c6c; width: 360px; position: relative; }
+    /*h1 { font-size: 16px; font-weight: normal; text-shadow: #fff 0 1px 0; margin: 0 0 0 0; padding: 0; }
+    small { color: #a3a3a3; font-size: 10px; position: absolute; top: 0.6em; right: 0;}*/
+    a { color: #a3a3a3; }
+
+    text.label { fill: #444; }
+    text.label.start { text-anchor: end; }
+    line.slope { stroke: #444; stroke-width: 1; }
+
+    .missing text.label { display: none; }
+    .missing line.slope { display: none; }
+
+    .over text.label { fill: #bb2629; font-size: 14px !important; font-weight: bold; }
+    .over line.slope { stroke: #bb2629; stroke-width: 2; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Life Expectancy (1960 &#151; 2012)</h1>
+    <h3>With data from <a href="http://data.worldbank.org/indicator/SP.DYN.LE00.IN">WorldBank</a></h2>
+  </header>
+  <div id="chart"></div>
+</body>
+
+<script>
+  data = null;
+  d3.csv("LifeExpectancyAtBirth.csv", function(csv) {
+    data = csv;
+
+    var
+        // Extract years from the dataset
+        years = d3.keys(csv[0]).filter( function(d) { return d.match(/^\d/) }), // Return numerical keys
+        // Extract names of countries from the dataset
+        countries = csv.map( function(d) { return d["CountryName"] }),
+        // Set "from" and "to" years to display
+        from = "1960",
+        to = "2012",
+        // Extract country names and start/end values from the dataset
+        data = csv
+                      .map( function(d) {
+                        var r = {
+                          label: d["CountryName"],
+                          start: parseFloat(d[from]),
+                          end: parseFloat(d[to])
+                        };
+                        return r;
+                      })
+                      //Require countries to have both values present
+                      .filter(function(d) { return (!isNaN(d.start) && !isNaN(d.end)); }),
+        // Extract the values for every country for both years in the dataset for the scale
+        values = data
+                      .map( function(d) { return d3.round(d.start, 1); })
+                      .filter( function(d) { return d; } )
+                      .concat(
+                        data
+                          .map( function(d) { return d3.round(d.end, 1); } )
+                          .filter( function(d) { return d; } )
+                      )
+                      .sort()
+                      .reverse(),
+        // Return true for countries without start/end values
+        missing = function(d) { return !d.start || !d.end; },
+
+        // Format values for labels
+        label_format = function(value) { return d3.format(".1f")(d3.round(value, 1)); },
+
+        font_size = 12,
+        margin = 20,
+        width = 800,
+        height = countries.length * font_size*1.5 + margin,
+        // height = 50000,
+
+        chart = d3.select("#chart").append("svg")
+                   .attr("width", width)
+                   .attr("height", height);
+
+    // Scales and positioning
+    var slope = d3.scale.ordinal()
+                  .domain(values)
+                  .rangePoints([margin, height]);
+
+    //Go through the list of countries in order, adding additional space as necessary.
+    var min_h_spacing = 1.2 * font_size, // 1.2 is standard font height:line space ratio
+        previousY = 0,
+        thisY,
+        additionalSpacing;
+    //Preset the Y positions (necessary only for the lower side)
+    //These are used as suggested positions.
+    data.forEach(function(d) {
+        d.startY = slope(d3.round(d.start,1));
+        d.endY = slope(d3.round(d.end,1));
+    });
+    //Loop over the higher side (right) values, adding space to both sides if there's a collision
+    data
+        .sort(function(a,b) {
+            if (a.end == b.end) return 0;
+            return (a.end < b.end) ? -1 : +1;
+        })
+        .forEach(function(d) {
+            thisY = d.endY; //position "suggestion"
+            additionalSpacing = d3.max([0, d3.min([(min_h_spacing - (thisY - previousY)), min_h_spacing])]);
+    
+            //Adjust all Y positions lower than this end's original Y position by the delta offset to preserve slopes:
+            data.forEach(function(dd) {
+                if (dd.startY >= d.endY) dd.startY += additionalSpacing;
+                if (dd.endY >= d.endY) dd.endY += additionalSpacing;
+            });
+        
+            previousY = thisY;
+        });
+
+    //Loop over the lower side (left) values, adding space to both sides if there's a collision
+    previousY = 0;
+    data
+        .sort(function(a,b) {
+            if (a.startY == b.startY) return 0;
+            return (a.startY < b.startY) ? -1 : +1;
+        })
+        .forEach(function(d) {
+            thisY = d.startY; //position "suggestion"
+            additionalSpacing = d3.max([0, d3.min([(min_h_spacing - (thisY - previousY)), min_h_spacing])]);
+    
+            //Adjust all Y positions lower than this start's original Y position by the delta offset to preserve slopes:
+            data.forEach(function(dd) {
+                if (dd.endY >= d.startY) dd.endY += additionalSpacing;
+                if (dd.label != d.label && dd.startY >= d.startY) dd.startY += additionalSpacing;
+            });
+            previousY = thisY;
+        });
+
+    // Countries
+    var country = chart.selectAll("g.country")
+                    .data( data )
+                    .enter()
+                    .append("g")
+                    .attr("class", "country")
+                    .classed("missing", function(d) { return missing(d); });
+
+    country
+      .on("mouseover", function(d,i) { return d3.select(this).classed("over", true); })
+      .on("mouseout", function(d,i) { return d3.select(this).classed("over", false); });
+
+    // ** Left column
+    country
+      .append("text")
+      .classed("label start", true)
+      .attr("x", 200)
+      .attr("y", function(d) {return d.startY;})
+      .attr("xml:space", "preserve")
+      .style("font-size", font_size)
+      .text(function(d) { return d.label+ " " + label_format(d.start); });
+
+    // ** Right column
+    country
+      .append("text")
+      .classed("label end", true)
+      .attr("x", width-100)
+      .attr("y", function(d) {return d.endY;})
+      .attr("xml:space", "preserve")
+      .style("font-size", font_size)
+      .text(function(d) { return label_format(d.end) + " " + d.label; });
+
+    // ** Slope lines
+    country
+      .append("line")
+      .classed("slope", function(d) { return d.start || d.end; })
+      .attr("x1", 210)
+      .attr("x2", width-110)
+      .attr("y1", function(d,i) {
+        return d.start && d.end ? d.startY - font_size/2 + 2 : null;
+      })
+      .attr("y2", function(d,i) {
+        return d.end && d.end ? d.endY - font_size/2 + 2 : null;
+      });
+
+    return chart;
+  });
+</script>
+
+</html>

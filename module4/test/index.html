@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Global Food Index Bar Chart</title>
+		<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+		<style type="text/css">
+			
+			body {
+				background-color: white;
+				font-family: Helvetica, Arial, sans-serif;
+				font-size: 8px;
+			}
+
+			 .headline{
+            font-size: 18px;
+            color:#d95f0e;
+        }	
+			
+		.axis path,
+        .axis line {
+          fill:none;
+          stroke:gray;
+          stroke-width: 0.5px;
+          shape-rendering: crispEdges;;
+        }
+			
+			.axis text {
+				font-family: Arial, sans-serif;
+				font-size: 8px;
+			}
+
+			.y.axis path {
+  				display: none;
+					}
+
+			
+
+		</style>
+	</head>
+	<body>
+
+		<script type="text/javascript">		
+
+			d3.select("body")
+				.append("p")
+				.text("Global Food Index Scores by Country")
+				.attr("class", "headline")
+				;
+
+
+			var w = 700;
+			var h = 1400;
+			var padding = [ 5, 10, 20, 100];  //Top, right, bottom, left
+
+			
+
+			var widthScale = d3.scale.linear()
+								.range([ 0, w - padding[1] - padding[3] ]);
+			
+			var heightScale = d3.scale.ordinal()
+								.rangeRoundBands([ padding[0], h - padding[2] ], 0.15);
+
+
+
+			var xAxis = d3.svg.axis()
+							.scale(widthScale)
+							.orient("bottom");
+
+			var yAxis = d3.svg.axis()
+							.scale(heightScale)
+							.orient("left");
+
+			var svg = d3.select("body")
+						.append("svg")
+						.attr("width", w)
+						.attr("height", h);
+
+			d3.csv("FoodDataFinal.csv", function(data) {
+
+				data.sort(function(a, b) {
+					return d3.descending(a.ScoreReversedHighGood, b.ScoreReversedHighGood);
+
+				
+				});
+
+				widthScale.domain([ 0, d3.max(data, function(d) {
+					return +d.ScoreReversedHighGood;
+				}) ]);
+
+				heightScale.domain(data.map(function(d) { return d.Country; } ));
+
+				var rects = svg.selectAll("rect")
+								.data(data)
+								.enter()
+								.append("rect");
+
+					rects.attr("x", padding[3])
+					.attr("y", function(d) {
+						return heightScale(d.Country);
+					})
+					.attr("width", function(d) {
+						return widthScale(d.ScoreReversedHighGood);
+					})
+					.attr("height", heightScale.rangeBand())
+					.attr("fill", "orange")
+					.attr("stroke", "black")
+					.append("title")
+					.text(function(d) {
+						return d.Country + "'s Food Index score is " + d.ScoreReversedHighGood;
+					});
+
+				svg.append("g")
+					.attr("class", "x axis")
+					.attr("transform", "translate(" + padding[3] + "," + (h - 55) + ")")
+					.call(xAxis)
+					;
+
+				svg.append("g")
+					.attr("class", "y axis")
+					.attr("transform", "translate(" + padding[3] + ",0)")
+					.call(yAxis)
+					;
+
+			});
+
+
+		</script>
+
+	</body>
+</html>
